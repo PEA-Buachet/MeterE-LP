@@ -1,0 +1,1360 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>แปลง Load Profile</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sarabun:wght@400;500;600;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammerjs/2.0.8/hammer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+<style>
+  /* Layout: hero header on a gradient, floating cards, charts/table in tabs, sticky action bar */
+  :root {
+    --bg: #eef1f6;
+    --surface: #ffffff;
+    --surface-2: #f1f4f9;
+    --fg: #1a2230;
+    --muted: #64718a;
+    --line: #e2e7f0;
+    --accent: #6d28d9;         /* PEA-ish violet */
+    --accent-2: #2563eb;       /* blue partner for gradients */
+    --accent-soft: #f1ebfd;
+    --grad: linear-gradient(120deg, #6d28d9 0%, #4f46e5 45%, #2563eb 100%);
+    --grad-soft: linear-gradient(120deg, rgba(109,40,217,.10), rgba(37,99,235,.10));
+    --good: #15803d;
+    --bad: #c0392b;
+    --warn: #b7791f;
+    --shadow-sm: 0 1px 2px rgba(26,34,48,.06), 0 1px 3px rgba(26,34,48,.08);
+    --shadow-md: 0 4px 12px rgba(26,34,48,.08), 0 2px 4px rgba(26,34,48,.05);
+    --shadow-lg: 0 12px 32px rgba(79,70,229,.14), 0 4px 10px rgba(26,34,48,.08);
+    --ring: rgba(109,40,217,.35);
+    /* stat-tile accent hues */
+    --t1: #6d28d9; --t2: #2563eb; --t3: #0891b2; --t4: #0d9488;
+    --t1-bg: var(--surface); --t2-bg: var(--surface); --t3-bg: var(--surface); --t4-bg: var(--surface);
+    /* hero text is white on the deep gradient */
+    --hero-ink: #ffffff; --hero-sub: rgba(255,255,255,.92);
+    --hero-chip-bg: rgba(255,255,255,.18); --hero-chip-bd: rgba(255,255,255,.28);
+    /* chart series (validated categorical slots 1/2/3 + import/export) */
+    --s-a: #2a78d6;    /* เฟส A — blue */
+    --s-b: #eb6834;    /* เฟส B — orange */
+    --s-c: #1baf7a;    /* เฟส C — aqua */
+    --s-imp: #2a78d6;  /* Import — blue */
+    --s-exp: #eb6834;  /* Export — orange */
+    --grid: #e7ebf3;
+    --chart-surface: #ffffff;
+    --font-head: "Sarabun", "Segoe UI", system-ui, sans-serif;
+    --font-body: "Sarabun", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      --bg: #0c1018;
+      --surface: #161c28;
+      --surface-2: #1e2636;
+      --fg: #e8edf6;
+      --muted: #9aa8bf;
+      --line: #2a3346;
+      --accent: #a78bfa;
+      --accent-2: #60a5fa;
+      --accent-soft: #241b3d;
+      --grad: linear-gradient(120deg, #7c3aed 0%, #6366f1 45%, #3b82f6 100%);
+      --grad-soft: linear-gradient(120deg, rgba(167,139,250,.14), rgba(96,165,250,.12));
+      --good: #4ade80;
+      --bad: #ef7a6c;
+      --warn: #e0b765;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+      --shadow-md: 0 4px 14px rgba(0,0,0,.45);
+      --shadow-lg: 0 14px 36px rgba(0,0,0,.55), 0 4px 10px rgba(124,58,237,.18);
+      --ring: rgba(167,139,250,.45);
+      --t1: #a78bfa; --t2: #60a5fa; --t3: #22d3ee; --t4: #2dd4bf;
+      --t1-bg: var(--surface); --t2-bg: var(--surface); --t3-bg: var(--surface); --t4-bg: var(--surface);
+      --hero-ink: #ffffff; --hero-sub: rgba(255,255,255,.92);
+      --hero-chip-bg: rgba(255,255,255,.18); --hero-chip-bd: rgba(255,255,255,.28);
+      --s-a: #3987e5;
+      --s-b: #d95926;
+      --s-c: #199e70;
+      --s-imp: #3987e5;
+      --s-exp: #d95926;
+      --grid: #232c3d;
+      --chart-surface: #161c28;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c1018;
+    --surface: #161c28;
+    --surface-2: #1e2636;
+    --fg: #e8edf6;
+    --muted: #9aa8bf;
+    --line: #2a3346;
+    --accent: #a78bfa;
+    --accent-2: #60a5fa;
+    --accent-soft: #241b3d;
+    --grad: linear-gradient(120deg, #7c3aed 0%, #6366f1 45%, #3b82f6 100%);
+    --grad-soft: linear-gradient(120deg, rgba(167,139,250,.14), rgba(96,165,250,.12));
+    --good: #4ade80;
+    --bad: #ef7a6c;
+    --warn: #e0b765;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+    --shadow-md: 0 4px 14px rgba(0,0,0,.45);
+    --shadow-lg: 0 14px 36px rgba(0,0,0,.55), 0 4px 10px rgba(124,58,237,.18);
+    --ring: rgba(167,139,250,.45);
+    --t1: #a78bfa; --t2: #60a5fa; --t3: #22d3ee; --t4: #2dd4bf;
+    --t1-bg: var(--surface); --t2-bg: var(--surface); --t3-bg: var(--surface); --t4-bg: var(--surface);
+    --hero-ink: #ffffff; --hero-sub: rgba(255,255,255,.92);
+    --hero-chip-bg: rgba(255,255,255,.18); --hero-chip-bd: rgba(255,255,255,.28);
+    --s-a: #3987e5;
+    --s-b: #d95926;
+    --s-c: #199e70;
+    --s-imp: #3987e5;
+    --s-exp: #d95926;
+    --grid: #232c3d;
+    --chart-surface: #161c28;
+    color-scheme: dark;
+  }
+
+  /* Pastel themes (opt-in) — each a single soft colour. Shared light base: */
+  :root[data-theme^="pastel-"] {
+    --bg: #f8f7fb;
+    --surface: #ffffff;
+    --surface-2: #f3f3f8;
+    --fg: #3a3450;
+    --muted: #8a84a0;
+    --line: #ebe9f1;
+    --good: #3f9e6b;
+    --bad: #d98a86;
+    --warn: #d6a95e;
+    --shadow-sm: 0 1px 2px rgba(120,100,160,.08), 0 1px 3px rgba(120,100,160,.08);
+    --shadow-md: 0 4px 14px rgba(150,120,200,.12), 0 2px 5px rgba(120,100,160,.07);
+    --shadow-lg: 0 14px 34px rgba(160,140,200,.18), 0 4px 10px rgba(120,100,160,.10);
+    --hero-ink: #4a3d63; --hero-sub: #5f5278;
+    --hero-chip-bg: rgba(255,255,255,.55); --hero-chip-bd: rgba(255,255,255,.8);
+    --t1-bg: var(--surface); --t2-bg: var(--surface); --t3-bg: var(--surface); --t4-bg: var(--surface);
+    /* chart series stay the readable validated set */
+    --s-a: #2a78d6; --s-b: #eb6834; --s-c: #1baf7a; --s-imp: #2a78d6; --s-exp: #eb6834;
+    --grid: #ece7f5; --chart-surface: #ffffff;
+    color-scheme: light;
+  }
+  /* ม่วง (purple) — ซอฟต์ลง */
+  :root[data-theme="pastel-purple"] {
+    --accent: #b49fe0; --accent-2: #cdbcee; --accent-soft: #f6f2fc; --ring: rgba(180,159,224,.35);
+    --grad: linear-gradient(120deg, #ece3fa 0%, #ddcef5 55%, #cbb8ef 100%);
+    --grad-soft: linear-gradient(120deg, rgba(180,159,224,.10), rgba(205,188,238,.07));
+    --t1: #9579cc; --t2: #a98fd8; --t3: #8a76c6; --t4: #bba0e2;
+  }
+  /* ฟ้า (blue) — ซอฟต์ลง */
+  :root[data-theme="pastel-blue"] {
+    --accent: #8dbce8; --accent-2: #b0d3f0; --accent-soft: #f0f6fc; --ring: rgba(141,188,232,.35);
+    --grad: linear-gradient(120deg, #dcecfa 0%, #c4e0f5 55%, #a9d0ef 100%);
+    --grad-soft: linear-gradient(120deg, rgba(141,188,232,.10), rgba(176,211,240,.07));
+    --t1: #6aa3da; --t2: #7fb0e0; --t3: #5c94ce; --t4: #97c3ea;
+  }
+  /* เขียว (green mint) — ซอฟต์ลง */
+  :root[data-theme="pastel-green"] {
+    --accent: #83d2b4; --accent-2: #a8e2cc; --accent-soft: #eef9f4; --ring: rgba(131,210,180,.35);
+    --grad: linear-gradient(120deg, #ddf3ea 0%, #c3ebdb 55%, #a4e0c8 100%);
+    --grad-soft: linear-gradient(120deg, rgba(131,210,180,.10), rgba(168,226,204,.07));
+    --t1: #4faf8b; --t2: #5fbd9a; --t3: #429c79; --t4: #83cfb2;
+  }
+  /* ชมพู (pink) — ซอฟต์ลง */
+  :root[data-theme="pastel-pink"] {
+    --accent: #eeaacb; --accent-2: #f5c6dd; --accent-soft: #fdf2f7; --ring: rgba(238,170,203,.35);
+    --grad: linear-gradient(120deg, #fbe3ee 0%, #f8d2e3 55%, #f3bdd6 100%);
+    --grad-soft: linear-gradient(120deg, rgba(238,170,203,.10), rgba(245,198,221,.07));
+    --t1: #d375a6; --t2: #e18ab7; --t3: #c66293; --t4: #ec9fc3;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background:
+      radial-gradient(900px 420px at 85% -10%, var(--grad-soft), transparent 60%),
+      radial-gradient(700px 360px at -10% 0%, var(--grad-soft), transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--fg);
+    font-family: var(--font-body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 18px 130px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* Hero header */
+  header.hero {
+    background: var(--grad);
+    border-radius: 20px;
+    padding: 30px clamp(20px, 4vw, 40px);
+    color: var(--hero-ink);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    animation: rise .5s ease both;
+  }
+  header.hero::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(500px 240px at 110% -40%, rgba(255,255,255,.35), transparent 60%);
+    pointer-events: none;
+  }
+  header.hero .badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--hero-chip-bg); backdrop-filter: blur(6px);
+    border: 1px solid var(--hero-chip-bd); color: var(--hero-ink);
+    padding: 5px 13px; border-radius: 999px;
+    font-size: 0.78rem; font-weight: 700; letter-spacing: .02em; margin-bottom: 14px;
+  }
+  header.hero h1 {
+    font-family: var(--font-head); font-weight: 800;
+    font-size: clamp(1.5rem, 4.5vw, 2.3rem);
+    margin: 0 0 8px; text-wrap: balance; letter-spacing: -0.015em;
+    line-height: 1.2; color: var(--hero-ink);
+  }
+  header.hero p { margin: 0; color: var(--hero-sub); font-size: clamp(0.9rem, 2.2vw, 1rem); max-width: 60ch; }
+
+  /* Drop zone */
+  .drop {
+    border: 2px dashed color-mix(in srgb, var(--accent) 45%, var(--line));
+    border-radius: 18px;
+    background: linear-gradient(var(--surface), var(--surface)) padding-box,
+                var(--grad-soft);
+    padding: 34px 20px; text-align: center; cursor: pointer;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    box-shadow: var(--shadow-sm);
+    animation: rise .5s ease .05s both;
+  }
+  .drop:hover, .drop.over {
+    border-color: var(--accent); transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+  .drop .ico {
+    width: 54px; height: 54px; margin: 0 auto 12px; display: grid; place-items: center;
+    background: var(--grad); border-radius: 16px; box-shadow: var(--shadow-md);
+    color: var(--hero-ink); font-size: 1.5rem;
+  }
+  .drop .big { font-size: 1.12rem; font-weight: 700; }
+  .drop .sub { color: var(--muted); font-size: 0.88rem; margin-top: 6px; }
+  .drop .pill {
+    display: inline-block; margin-top: 16px; padding: 10px 22px;
+    background: var(--grad); color: var(--hero-ink); border-radius: 999px;
+    font-weight: 800; font-size: 0.92rem; box-shadow: var(--shadow-md);
+  }
+  input[type=file] { display: none; }
+
+  /* Summary tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .tile {
+    position: relative; background: var(--tcbg, var(--surface));
+    border: 1px solid var(--line); border-radius: 16px;
+    padding: 16px 16px 16px 18px; box-shadow: var(--shadow-sm); overflow: hidden;
+    animation: rise .5s ease both;
+  }
+  .tile::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+    background: var(--tc, var(--accent));
+  }
+  .tile:nth-child(1){ --tc: var(--t1); --tcbg: var(--t1-bg); }
+  .tile:nth-child(2){ --tc: var(--t2); --tcbg: var(--t2-bg); }
+  .tile:nth-child(3){ --tc: var(--t3); --tcbg: var(--t3-bg); }
+  .tile:nth-child(4){ --tc: var(--t4); --tcbg: var(--t4-bg); }
+  .tile .k { font-size: 0.74rem; font-weight: 600; letter-spacing: .02em; color: var(--muted); }
+  .tile .v { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 3px; color: var(--tc, var(--fg)); }
+
+  /* Controls row */
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .controls label { font-size: 0.9rem; color: var(--muted); display: inline-flex; align-items: center; gap: 7px; font-weight: 500; }
+  select, .btn, .search input, input[type=date] {
+    font-family: var(--font-body); font-size: 0.9rem;
+    border: 1px solid var(--line); border-radius: 10px;
+    background: var(--surface); color: var(--fg); padding: 9px 13px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input[type=date] { color-scheme: inherit; }
+  select:focus, .search input:focus, input[type=date]:focus, .btn:focus-visible {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring);
+  }
+  .search { flex: 1; min-width: 180px; }
+  .search input { width: 100%; }
+  label.chk {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    padding: 5px 11px; border: 1px solid var(--line); border-radius: 999px;
+    font-size: 0.85rem; color: var(--fg); background: var(--surface); user-select: none;
+    transition: border-color .15s, background .15s;
+  }
+  label.chk:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  label.chk input { accent-color: var(--accent); }
+
+  /* Table */
+  .tablebox { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-sm); }
+  .scroll { overflow-x: auto; max-height: 60vh; overflow-y: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--grad); color: var(--hero-ink);
+    text-align: left; padding: 12px 13px; white-space: nowrap;
+    font-weight: 700; font-size: 0.82rem;
+  }
+  thead th.num { text-align: right; }
+  tbody td {
+    padding: 9px 13px; border-bottom: 1px solid var(--line);
+    white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+  tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+  tbody td.meter { font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent); }
+  tbody tr:hover td { background: var(--accent-soft); }
+  td.dash { color: var(--muted); text-align: center; }
+  .num { text-align: right; }
+  .morebar { padding: 11px 12px; text-align: center; color: var(--muted); font-size: 0.85rem; background: var(--surface-2); }
+
+  /* Sticky footer actions */
+  .footer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+    padding: 12px max(16px, env(safe-area-inset-left,0px));
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+    box-shadow: 0 -4px 20px rgba(26,34,48,.06);
+  }
+  .btn { cursor: pointer; font-weight: 600; }
+  .btn.primary {
+    background: var(--grad); color: var(--hero-ink); border: none;
+    padding: 11px 22px; box-shadow: var(--shadow-md); font-weight: 800;
+  }
+  .btn.primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+  .btn.ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn:active:not(:disabled) { transform: translateY(0); }
+
+  /* Tabs */
+  .tabs {
+    display: inline-flex; gap: 4px; padding: 5px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 14px; flex-wrap: wrap; align-self: flex-start;
+  }
+  .tab {
+    appearance: none; border: none; background: none; cursor: pointer;
+    font-family: var(--font-body); font-size: 0.92rem; font-weight: 600; color: var(--muted);
+    padding: 9px 18px; border-radius: 10px; transition: all .18s ease;
+  }
+  .tab:hover { color: var(--fg); }
+  .tab.active { color: var(--hero-ink); background: var(--grad); box-shadow: var(--shadow-sm); font-weight: 700; }
+
+  /* Chart cards */
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+  .chartcard {
+    position: relative;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 18px; padding: 18px 18px 14px; box-shadow: var(--shadow-sm);
+    transition: box-shadow .2s ease, transform .2s ease;
+    animation: rise .5s ease both;
+  }
+  .chartcard:hover { box-shadow: var(--shadow-md); }
+  /* primary (large) chart spans the full grid width and is taller */
+  .chartcard-main { grid-column: 1 / -1; }
+  .chartcard-main .canvas-wrap { height: 420px; }
+  @media (max-width: 560px) { .chartcard-main .canvas-wrap { height: 300px; } }
+  .chartcard h3 {
+    margin: 0 0 2px; font-family: var(--font-head); font-size: 1.05rem; font-weight: 700;
+    display: flex; align-items: center; gap: 8px; padding-right: 44px;
+  }
+  .chartcard h3::before {
+    content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--grad);
+  }
+  .chartcard .csub { margin: 0 0 14px; color: var(--muted); font-size: 0.82rem; padding-left: 18px; }
+  .canvas-wrap { position: relative; height: 290px; width: 100%; }
+  @media (max-width: 560px) { .canvas-wrap { height: 240px; } }
+
+  /* Expand (fullscreen) button + overlay state */
+  .btn-full {
+    position: absolute; top: 14px; right: 14px; z-index: 3;
+    width: 34px; height: 34px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--surface-2); color: var(--accent);
+    display: grid; place-items: center; font-size: 1rem; line-height: 1;
+    transition: background .15s, transform .15s;
+  }
+  .btn-full:hover { background: var(--accent-soft); transform: scale(1.06); }
+  .chartcard.expanded {
+    position: fixed; inset: 0; z-index: 60; margin: 0;
+    width: 100%; height: 100%; max-width: none; border-radius: 0;
+    padding: max(16px, env(safe-area-inset-top,0px)) max(18px, env(safe-area-inset-right,0px))
+             max(16px, env(safe-area-inset-bottom,0px)) max(18px, env(safe-area-inset-left,0px));
+    overflow: auto; animation: none;
+    display: flex; flex-direction: column;
+  }
+  .chartcard.expanded .canvas-wrap { height: auto; flex: 1 1 auto; min-height: 0; }
+  body.has-expanded { overflow: hidden; }
+  .legendrow { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .legi { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--muted); font-weight: 500; }
+  .legi .sw { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+  .legi .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+  .hint { font-size: 0.8rem; color: var(--muted); }
+  .err {
+    color: var(--bad); font-size: 0.88rem; background: color-mix(in srgb, var(--bad) 10%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--bad) 30%, var(--line));
+    padding: 12px 14px; border-radius: 12px;
+  }
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%) translateY(8px);
+    bottom: calc(84px + env(safe-area-inset-bottom,0px));
+    background: var(--grad); color: var(--hero-ink); padding: 11px 20px;
+    border-radius: 999px; font-size: 0.88rem; font-weight: 700; z-index: 20;
+    box-shadow: var(--shadow-lg);
+    opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  details.help { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px 16px; box-shadow: var(--shadow-sm); }
+  details.help summary { cursor: pointer; font-weight: 700; padding: 12px 0; font-size: 0.92rem; }
+  details.help ul { margin: 4px 0 14px; padding-left: 18px; color: var(--muted); font-size: 0.86rem; line-height: 1.7; }
+  code { font-family: var(--font-mono); background: var(--surface-2); padding: 2px 6px; border-radius: 5px; font-size: 0.82em; color: var(--accent); }
+
+  /* Theme toggle (top-right of hero) */
+  .theme-toggle {
+    position: absolute; top: 16px; right: 16px;
+    display: inline-flex; gap: 2px; padding: 4px;
+    background: var(--hero-chip-bg); border: 1px solid var(--hero-chip-bd);
+    border-radius: 999px; backdrop-filter: blur(6px); z-index: 2;
+  }
+  .theme-toggle button {
+    appearance: none; border: none; cursor: pointer;
+    width: 34px; height: 34px; border-radius: 999px;
+    background: transparent; color: var(--hero-ink); font-size: 1rem;
+    display: grid; place-items: center; transition: background .15s, transform .15s;
+  }
+  .theme-toggle button:hover { background: rgba(255,255,255,.4); }
+  .theme-toggle button.active { background: #fff; color: var(--t1); box-shadow: var(--shadow-sm); }
+  .theme-toggle .tdiv { width: 1px; align-self: stretch; margin: 4px 2px; background: var(--hero-chip-bd); }
+  .theme-toggle button.swatch {
+    width: 26px; height: 26px; margin: 4px 1px; border-radius: 50%;
+    background: var(--sw); border: 2px solid rgba(255,255,255,.7);
+    box-shadow: 0 1px 3px rgba(0,0,0,.15);
+  }
+  .theme-toggle button.swatch:hover { transform: scale(1.12); }
+  .theme-toggle button.swatch.active {
+    background: var(--sw); outline: 2px solid #fff; outline-offset: 1px;
+    box-shadow: 0 0 0 2px var(--sw), var(--shadow-sm);
+  }
+  @media (max-width: 460px) { .theme-toggle button.swatch { width: 22px; height: 22px; } }
+  .theme-toggle button:active { transform: scale(.92); }
+  @media (max-width: 460px) {
+    .theme-toggle { top: 12px; right: 12px; }
+    .theme-toggle button { width: 30px; height: 30px; font-size: .92rem; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="theme-toggle" id="themeToggle" role="group" aria-label="เลือกโหมดสี">
+      <button data-theme-mode="light" title="โหมดสว่าง" aria-label="โหมดสว่าง">☀️</button>
+      <button data-theme-mode="dark" title="โหมดมืด" aria-label="โหมดมืด">🌙</button>
+      <button data-theme-mode="system" title="ตามระบบ" aria-label="ตามระบบ">💻</button>
+      <span class="tdiv" aria-hidden="true"></span>
+      <button class="swatch" data-theme-mode="pastel-purple" title="พาสเทลม่วง" aria-label="พาสเทลม่วง" style="--sw:#c3b2ec"></button>
+      <button class="swatch" data-theme-mode="pastel-blue" title="พาสเทลฟ้า" aria-label="พาสเทลฟ้า" style="--sw:#a9d0ef"></button>
+      <button class="swatch" data-theme-mode="pastel-green" title="พาสเทลเขียว" aria-label="พาสเทลเขียว" style="--sw:#a4e0c8"></button>
+      <button class="swatch" data-theme-mode="pastel-pink" title="พาสเทลชมพู" aria-label="พาสเทลชมพู" style="--sw:#f3bdd6"></button>
+    </div>
+    <span class="badge">⚡ PEA · Meter-E Load Profile Converter</span>
+    <h1>แปลงข้อมูล Load Profile</h1>
+  </header>
+
+  <div class="drop" id="drop">
+    <div class="ico">⬆</div>
+    <div class="big">ลากไฟล์มาวาง หรือคลิกเพื่อเลือก</div>
+    <div class="sub">รองรับ .xlsx .xls .txt .csv — ข้อมูลอยู่ในคอลัมน์เดียว คั่นด้วยจุลภาค (,)</div>
+    <span class="pill">เลือกไฟล์</span>
+  </div>
+  <input type="file" id="file" accept=".xlsx,.xls,.txt,.csv" />
+
+  <div id="errbox" class="err" hidden></div>
+
+  <div id="result" hidden>
+    <div class="tiles" id="tiles"></div>
+
+    <div class="tabs" style="margin-top:16px">
+      <button class="tab active" data-tab="data">📋 ตารางข้อมูล</button>
+      <button class="tab" data-tab="charts">📈 กราฟ</button>
+    </div>
+
+    <div id="panel-charts" hidden style="margin-top:14px">
+      <div class="controls">
+        <label>มิเตอร์:
+          <select id="chartMeter"></select>
+        </label>
+        <label>ช่วงเวลา:
+          <select id="chartRange">
+            <option value="all">ทั้งหมด</option>
+            <option value="1">24 ชั่วโมงล่าสุด</option>
+            <option value="7">7 วันล่าสุด</option>
+            <option value="30">30 วันล่าสุด</option>
+            <option value="custom">เลือกช่วงวันที่เอง…</option>
+          </select>
+        </label>
+        <label>รวมเวลา:
+          <select id="chartAgg">
+            <option value="raw">ทุกๆ 15 นาที</option>
+            <option value="hour">รายชั่วโมง</option>
+            <option value="day">รายวัน</option>
+          </select>
+        </label>
+        <div id="dateRangeBox" class="controls" hidden style="gap:8px">
+          <label>จาก: <input type="date" id="dateFrom"></label>
+          <label>ถึง: <input type="date" id="dateTo"></label>
+        </div>
+        <button class="btn ghost" id="btnResetZoom" title="คืนค่าการซูมทุกกราฟ">🔍 รีเซ็ตซูม</button>
+      </div>
+
+      <p class="hint" style="margin:10px 0 0">💡 <b>ซูม:</b> หมุนล้อเมาส์ / จีบนิ้ว (pinch) หรือกด Shift ค้างแล้วลากคลุมพื้นที่ · <b>เลื่อน:</b> ลากกราฟไปซ้าย-ขวา · คลิกชื่อเส้นเพื่อเปิด/ปิดเส้น · ปุ่ม "รีเซ็ตซูม" เพื่อคืนค่า</p>
+      <div class="charts" style="margin-top:14px">
+        <div class="chartcard chartcard-main">
+          <button class="btn-full" type="button" title="ขยายเต็มจอ" aria-label="ขยายเต็มจอ">⛶</button>
+          <h3>กราฟกำหนดเอง</h3>
+          <p class="csub">เลือกค่าที่ต้องการพล็อตเอง (เลือกได้หลายเส้น) และชนิดกราฟ</p>
+          <div class="controls" style="padding-left:18px; margin-bottom:10px">
+            <label>ค่าที่พล็อต:</label>
+            <label class="chk"><input type="checkbox" class="customSeries" value="a"> แรงดัน A</label>
+            <label class="chk"><input type="checkbox" class="customSeries" value="b"> แรงดัน B</label>
+            <label class="chk"><input type="checkbox" class="customSeries" value="c"> แรงดัน C</label>
+            <label class="chk"><input type="checkbox" class="customSeries" value="imp" checked> kWh Import</label>
+            <label class="chk"><input type="checkbox" class="customSeries" value="exp"> kWh Export</label>
+            <label class="chk"><input type="checkbox" class="customSeries" value="cur"> กระแส I (A)</label>
+            <label style="margin-left:auto">ชนิด:
+              <select id="customType">
+                <option value="line">เส้น</option>
+                <option value="bar">แท่ง</option>
+              </select>
+            </label>
+          </div>
+          <div class="canvas-wrap"><canvas id="cCustom"></canvas></div>
+        </div>
+
+        <div class="chartcard">
+          <button class="btn-full" type="button" title="ขยายเต็มจอ" aria-label="ขยายเต็มจอ">⛶</button>
+          <h3>แรงดันไฟฟ้า (Voltage)</h3>
+          <p class="csub">เฟส A / B / C ตามวันที่-เวลา — หน่วยโวลต์ (V)</p>
+          <div class="canvas-wrap"><canvas id="cVolt"></canvas></div>
+        </div>
+
+        <div class="chartcard">
+          <button class="btn-full" type="button" title="ขยายเต็มจอ" aria-label="ขยายเต็มจอ">⛶</button>
+          <h3>พลังงานไฟฟ้า (kWh Import / Export)</h3>
+          <p class="csub">พลังงานที่รับเข้า (Import) และจ่ายออก (Export) ตามวันที่-เวลา</p>
+          <div class="canvas-wrap"><canvas id="cPower"></canvas></div>
+        </div>
+
+        <div class="chartcard">
+          <button class="btn-full" type="button" title="ขยายเต็มจอ" aria-label="ขยายเต็มจอ">⛶</button>
+          <h3>แรงดันเฉลี่ยรายวัน</h3>
+          <p class="csub">ค่าเฉลี่ย ต่ำสุด และสูงสุดของแรงดัน (เฟสที่มีข้อมูล) ในแต่ละวัน</p>
+          <div class="canvas-wrap"><canvas id="cDaily"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="panel-data">
+    <div class="controls" style="margin-top:14px">
+      <label>มิเตอร์:
+        <select id="meterFilter"><option value="">ทั้งหมด</option></select>
+      </label>
+      <div class="search"><input id="search" type="text" placeholder="ค้นหา (รหัสเครื่องวัด / วันที่)…" /></div>
+    </div>
+
+    <div class="tablebox" style="margin-top:12px">
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>รหัสเครื่องวัด</th>
+              <th>ปี-เดือน-วัน</th>
+              <th>เวลา</th>
+              <th>สถานะ</th>
+              <th class="num">แรงดันเฟส A</th>
+              <th class="num">แรงดันเฟส B</th>
+              <th class="num">แรงดันเฟส C</th>
+              <th class="num">kWh Import</th>
+              <th class="num">kWh Export</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="morebar" id="morebar" hidden></div>
+    </div>
+    </div><!-- /panel-data -->
+  </div>
+
+  <details class="help">
+    <summary>การแปลงข้อมูลทำอย่างไร?</summary>
+    <ul>
+      <li>แต่ละแถวของไฟล์ดิบคือข้อความเดียวคั่นด้วยจุลภาค 8 ช่อง เช่น <code>TTC01 6500000073,2022-07-25 15:30:00,128,394,-,-,0,0</code></li>
+      <li>ช่องที่ 2 (วัน-เวลา) ถูกแยกเป็น <b>ปี-เดือน-วัน</b> และ <b>เวลา</b></li>
+      <li>แรงดันเฟส A/B/C ถูกหารด้วย 100 (เช่น 394 → 3.94, 24138 → 241.38) ส่วนค่า <code>-</code> คงไว้เป็น <code>-</code></li>
+      <li>kWh Import / kWh Export ถูกหารด้วย 1000 (ค่าดิบหน่วย Wh → kWh เช่น 1500 → 1.500)</li>
+      <li>แถวที่ว่างหรือเป็นหัวตารางจะถูกข้ามอัตโนมัติ</li>
+    </ul>
+  </details>
+</div>
+
+<div class="footer">
+  <button class="btn primary" id="btnXlsx" disabled>⬇ ดาวน์โหลด Excel (.xlsx)</button>
+  <button class="btn ghost" id="btnCsv" disabled>⬇ ดาวน์โหลด CSV</button>
+  <button class="btn ghost" id="btnCopy" disabled>คัดลอกตาราง</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+  const HEADERS = ["รหัสเครื่องวัด","ปี-เดือน-วัน","เวลา","สถานะ",
+    "แรงดันเฟส A/100","แรงดันเฟส B/100","แรงดันเฟส C/100","kWh Import","kWh Export"];
+  const RENDER_LIMIT = 500;
+
+  let rows = [];        // all converted rows (arrays of 9)
+  let filtered = [];
+  let srcName = "load_profile";
+
+  const $ = (id) => document.getElementById(id);
+  const drop = $("drop"), fileInput = $("file");
+  const errbox = $("errbox"), result = $("result");
+  const tbody = $("tbody"), morebar = $("morebar");
+  const meterFilter = $("meterFilter"), search = $("search");
+  const toast = $("toast");
+
+  /* ---------- THEME (light / dark / system) ---------- */
+  const THEME_KEY = "lp_theme";
+  function getStoredTheme() {
+    try { return localStorage.getItem(THEME_KEY) || "system"; } catch (e) { return "system"; }
+  }
+  function applyTheme(mode) {
+    const root = document.documentElement;
+    if (mode === "system") root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", mode);
+    // mark the active button
+    document.querySelectorAll("#themeToggle button").forEach(b =>
+      b.classList.toggle("active", b.dataset.themeMode === mode));
+  }
+  function setTheme(mode) {
+    try { localStorage.setItem(THEME_KEY, mode); } catch (e) {}
+    applyTheme(mode);
+    // redraw charts so their colors follow the new theme
+    if (typeof renderCharts === "function" && !$("panel-charts").hidden) {
+      try { renderCharts(); } catch (e) {}
+    }
+  }
+  // apply stored theme immediately, before the user sees the page
+  applyTheme(getStoredTheme());
+  document.querySelectorAll("#themeToggle button").forEach(btn =>
+    btn.addEventListener("click", () => setTheme(btn.dataset.themeMode)));
+  // if on "system", follow OS changes live
+  try {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      if (getStoredTheme() === "system" && typeof renderCharts === "function" && !$("panel-charts").hidden) {
+        try { renderCharts(); } catch (e) {}
+      }
+    });
+  } catch (e) {}
+
+  function showToast(msg) {
+    toast.textContent = msg; toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove("show"), 1800);
+  }
+  function showErr(msg) { errbox.textContent = msg; errbox.hidden = !msg; }
+
+  // Divide voltage by 100, keep "-" and blanks as-is. Returns {text, isNum}
+  function volt(v) {
+    v = (v == null ? "" : String(v)).trim();
+    if (v === "" || v === "-") return { text: "-", isNum: false };
+    const n = Number(v.replace(/,/g, ""));
+    if (!isFinite(n)) return { text: v, isNum: false };
+    return { text: (n / 100).toFixed(2), isNum: true, num: n / 100 };
+  }
+  // kW Import/Export: raw value is in Wh — divide by 1000 to get kWh.
+  function kw(v) {
+    v = (v == null ? "" : String(v)).trim();
+    if (v === "" || v === "-") return { text: "-", isNum: false };
+    const n = Number(v.replace(/,/g, ""));
+    if (!isFinite(n)) return { text: v, isNum: false };
+    const kwh = n / 1000;
+    return { text: kwh.toFixed(3), isNum: true, num: kwh };
+  }
+
+  // Detect which delimiter a set of lines uses (comma, tab, semicolon, pipe).
+  // Picks the one that most consistently yields many fields per line.
+  function detectDelimiter(lines) {
+    const cands = [",", "\t", ";", "|"];
+    let best = ",", bestScore = -1;
+    const sample = lines.filter(l => l && String(l).trim()).slice(0, 50);
+    for (const d of cands) {
+      let score = 0;
+      for (const l of sample) {
+        const n = String(l).split(d).length;
+        if (n >= 8) score += 2;        // reward lines that reach the full field count
+        else if (n >= 3) score += 1;
+      }
+      if (score > bestScore) { bestScore = score; best = d; }
+    }
+    return best;
+  }
+
+  // Split a line on the given delimiter; also collapse runs of whitespace
+  // when the delimiter is whitespace-based.
+  function splitLine(s, delim) {
+    if (delim === "ws") return s.trim().split(/\s+/);
+    return s.split(delim);
+  }
+
+  // Parse one raw line into a 9-col output row. `delim` is the detected delimiter.
+  // Handles the normal 8-field shape AND a 9-field shape where date & time are
+  // already in separate columns. Returns null for header/garbage lines.
+  function parseLine(line, delim) {
+    if (line == null) return null;
+    let s = String(line).replace(/^﻿/, "").trim();   // strip BOM
+    if (!s) return null;
+    let p = splitLine(s, delim).map(x => x.trim());
+    if (p.length < 7) return null;
+
+    const meter = p[0];
+    // skip the header row if present (Thai or English header keywords)
+    if (/รหัสเครื่อง|ปี-เดือน|meter\s*id/i.test(meter) || /ปี-เดือน|date/i.test(p[1] || "")) return null;
+
+    let date = "", time = "", rest;
+    // Case A: field 1 holds "YYYY-MM-DD HH:MM:SS" (date+time together) -> 8 cols total
+    const combo = (p[1] || "").match(/^(\d{4}[-/]\d{1,2}[-/]\d{1,2})[ T]+(\d{1,2}:\d{2}(?::\d{2})?)/);
+    // Case B: field 1 is date only, field 2 is time -> 9 cols total
+    const dateOnly = (p[1] || "").match(/^(\d{4}[-/]\d{1,2}[-/]\d{1,2})$/);
+    const timeNext = (p[2] || "").match(/^\d{1,2}:\d{2}(?::\d{2})?$/);
+
+    if (combo) {
+      date = combo[1].replace(/\//g, "-"); time = combo[2];
+      rest = p.slice(2);                    // status, A, B, C, imp, exp
+    } else if (dateOnly && timeNext) {
+      date = dateOnly[1].replace(/\//g, "-"); time = p[2];
+      rest = p.slice(3);
+    } else {
+      // Fallback: treat field 1 as date, try to split a space out of it
+      const sp = (p[1] || "").split(/[ T]+/);
+      if (!/\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(sp[0] || "")) return null;  // not a data row
+      date = (sp[0] || "").replace(/\//g, "-"); time = sp.slice(1).join(" ");
+      rest = p.slice(2);
+    }
+
+    // rest = [status, phaseA, phaseB, phaseC, kwImport, kwExport]
+    const status = rest[0] != null ? rest[0] : "";
+    const a = volt(rest[1]), b = volt(rest[2]), c = volt(rest[3]);
+    const ki = kw(rest[4]), ke = kw(rest[5]);
+    return {
+      cells: [meter, date, time, status, a, b, c, ki, ke],
+      meter, date
+    };
+  }
+
+  function convert(lines) {
+    const delim = detectDelimiter(lines);
+    const out = [];
+    let skipped = 0;
+    for (const ln of lines) {
+      const r = parseLine(ln, delim);
+      if (r) out.push(r); else if (ln && String(ln).trim()) skipped++;
+    }
+    convert._lastDelim = delim;
+    convert._skipped = skipped;
+    convert._sample = (lines.find(l => l && String(l).trim()) || "").slice(0, 120);
+    return out;
+  }
+
+  function buildTiles() {
+    const meters = new Set(rows.map(r => r.meter));
+    const dates = rows.map(r => r.date).filter(Boolean).sort();
+    const tiles = [
+      ["จำนวนแถว", rows.length.toLocaleString()],
+      ["จำนวนมิเตอร์", meters.size],
+      ["วันที่เริ่ม", dates[0] || "-"],
+      ["วันที่ล่าสุด", dates[dates.length - 1] || "-"],
+    ];
+    $("tiles").innerHTML = tiles.map(t =>
+      `<div class="tile"><div class="k">${t[0]}</div><div class="v">${t[1]}</div></div>`).join("");
+
+    const sortedMeters = [...meters].sort();
+    meterFilter.innerHTML = '<option value="">ทั้งหมด</option>' +
+      sortedMeters.map(m => `<option value="${escAttr(m)}">${escHtml(m)}</option>`).join("");
+    chartMeter.innerHTML = sortedMeters.map(m => `<option value="${escAttr(m)}">${escHtml(m)}</option>`).join("");
+  }
+
+  function escHtml(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+  function escAttr(s){return String(s).replace(/"/g,'&quot;');}
+
+  function applyFilter() {
+    const mf = meterFilter.value;
+    const q = search.value.trim().toLowerCase();
+    filtered = rows.filter(r => {
+      if (mf && r.meter !== mf) return false;
+      if (q) {
+        const hay = (r.meter + " " + r.date).toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+    renderTable();
+  }
+
+  function cellHtml(cell, idx) {
+    // idx: 4,5,6 = voltages; 7,8 = kw ; others plain
+    if (typeof cell === "object") {
+      if (!cell.isNum) return `<td class="dash">${escHtml(cell.text)}</td>`;
+      return `<td class="num">${escHtml(cell.text)}</td>`;
+    }
+    const cls = idx === 0 ? "meter" : "";
+    return `<td class="${cls}">${escHtml(cell)}</td>`;
+  }
+
+  function renderTable() {
+    const n = filtered.length;
+    const slice = filtered.slice(0, RENDER_LIMIT);
+    tbody.innerHTML = slice.map(r =>
+      "<tr>" + r.cells.map((c, i) => cellHtml(c, i)).join("") + "</tr>").join("");
+    if (n > RENDER_LIMIT) {
+      morebar.hidden = false;
+      morebar.textContent = `แสดง ${RENDER_LIMIT.toLocaleString()} จาก ${n.toLocaleString()} แถว — ไฟล์ที่ดาวน์โหลดจะมีครบทุกแถว`;
+    } else {
+      morebar.hidden = true;
+    }
+  }
+
+  // Build a plain 2D array (header + data) with raw JS types for export
+  function toAOA() {
+    const aoa = [HEADERS.slice()];
+    for (const r of filtered) {
+      aoa.push(r.cells.map(c => {
+        if (typeof c === "object") return c.isNum ? c.num : c.text;
+        return c;
+      }));
+    }
+    return aoa;
+  }
+
+  // Save a file through the viewer's download capability, with a browser
+  // fallback for when the page is opened outside the artifact viewer.
+  async function saveFile(filename, data, mime) {
+    try {
+      const downloads = await (window.claude && window.claude.use
+        ? window.claude.use("downloads") : null);
+      if (downloads) {
+        await downloads.save({ filename, data });
+        return true;
+      }
+    } catch (e) { /* declined or unavailable → fall back */ }
+    // Fallback: blob link (works when opened as a normal web page)
+    try {
+      const blob = data instanceof Blob ? data : new Blob([data], {type: mime || "application/octet-stream"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  async function downloadXlsx() {
+    const aoa = toAOA();
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{wch:20},{wch:12},{wch:10},{wch:8},{wch:13},{wch:13},{wch:13},{wch:11},{wch:11}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "LoadProfile");
+    const out = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+    const blob = new Blob([out], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const ok = await saveFile(srcName + "_แปลงแล้ว.xlsx", blob);
+    showToast(ok ? "บันทึกไฟล์ Excel แล้ว" : "บันทึกไม่สำเร็จ");
+  }
+
+  async function downloadCsv() {
+    const aoa = toAOA();
+    const esc = v => {
+      v = v == null ? "" : String(v);
+      return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+    };
+    const csv = "﻿" + aoa.map(r => r.map(esc).join(",")).join("\r\n");
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const ok = await saveFile(srcName + "_แปลงแล้ว.csv", blob, "text/csv;charset=utf-8;");
+    showToast(ok ? "บันทึกไฟล์ CSV แล้ว" : "บันทึกไม่สำเร็จ");
+  }
+
+  async function copyTable() {
+    const aoa = toAOA();
+    const tsv = aoa.map(r => r.join("\t")).join("\n");
+    try {
+      await navigator.clipboard.writeText(tsv);
+      showToast("คัดลอกแล้ว — วางใน Excel ได้เลย");
+    } catch (e) {
+      // fallback: select a temp textarea
+      const ta = document.createElement("textarea");
+      ta.value = tsv; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); showToast("คัดลอกแล้ว"); }
+      catch (_) { showToast("คัดลอกไม่สำเร็จ ลองดาวน์โหลดแทน"); }
+      ta.remove();
+    }
+  }
+
+  function finishLoad(name) {
+    srcName = (name || "load_profile").replace(/\.[^.]+$/, "");
+    if (!rows.length) {
+      const delimName = { ",":"จุลภาค (,)", "\t":"แท็บ (Tab)", ";":"อัฒภาค (;)", "|":"ขีดตั้ง (|)" }[convert._lastDelim] || convert._lastDelim;
+      const sample = convert._sample ? ("<br>ตัวอย่างบรรทัดแรก: <code>" + escHtml(convert._sample) + "</code>") : "";
+      errbox.innerHTML =
+        "ไม่พบข้อมูลที่แปลงได้ — ไฟล์นี้อ่านแล้วแต่แยกคอลัมน์ไม่ได้<br>" +
+        "ระบบตรวจพบตัวคั่น: <b>" + escHtml(delimName) + "</b> และต้องมีอย่างน้อย 7–9 ช่องต่อบรรทัด " +
+        "(รหัสเครื่องวัด, วัน-เวลา, สถานะ, แรงดัน A/B/C, kWh Import, kWh Export)" + sample;
+      errbox.hidden = false;
+      return;
+    }
+    showErr("");
+    buildTiles();
+    applyFilter();
+    result.hidden = false;
+    ["btnXlsx","btnCsv","btnCopy"].forEach(id => $(id).disabled = false);
+    showToast(`แปลงสำเร็จ ${rows.length.toLocaleString()} แถว`);
+  }
+
+  function handleFile(f) {
+    showErr("");
+    const name = f.name || "";
+    const ext = (name.split(".").pop() || "").toLowerCase();
+    const reader = new FileReader();
+
+    if (ext === "xlsx" || ext === "xls") {
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const wb = XLSX.read(data, {type:"array"});
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const aoa = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:""});
+          // Each row may already be split into columns OR be one string in col A.
+          const lines = aoa.map(r => {
+            if (!r || !r.length) return "";
+            if (r.length === 1) return r[0];
+            // if the file is already multi-column, re-join with commas
+            return r.join(",");
+          });
+          rows = convert(lines);
+          finishLoad(name);
+        } catch (err) {
+          showErr("อ่านไฟล์ Excel ไม่สำเร็จ: " + err.message);
+        }
+      };
+      reader.onerror = () => showErr("อ่านไฟล์ไม่สำเร็จ");
+      reader.readAsArrayBuffer(f);
+    } else {
+      // txt / csv — read as bytes, then decode (UTF-8, fall back to Thai Windows-874)
+      reader.onload = (e) => {
+        try {
+          const buf = new Uint8Array(e.target.result);
+          let text;
+          try {
+            text = new TextDecoder("utf-8", { fatal: false }).decode(buf);
+            // if UTF-8 produced many replacement chars, the file is likely Thai ANSI
+            const bad = (text.match(/\uFFFD/g) || []).length;
+            if (bad > 3) {
+              try { text = new TextDecoder("windows-874").decode(buf); }
+              catch (_) { /* keep utf-8 result */ }
+            }
+          } catch (_) {
+            text = new TextDecoder("windows-874").decode(buf);
+          }
+          const lines = text.split(/\r\n|\n|\r/);
+          rows = convert(lines);
+          finishLoad(name);
+        } catch (err) {
+          showErr("อ่านไฟล์ข้อความไม่สำเร็จ: " + err.message);
+        }
+      };
+      reader.onerror = () => showErr("อ่านไฟล์ไม่สำเร็จ");
+      reader.readAsArrayBuffer(f);
+    }
+  }
+
+  // Wire up UI
+  drop.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+  ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, (e) => {
+    e.preventDefault(); drop.classList.add("over");
+  }));
+  ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, (e) => {
+    e.preventDefault(); drop.classList.remove("over");
+  }));
+  drop.addEventListener("drop", (e) => {
+    const f = e.dataTransfer.files[0]; if (f) handleFile(f);
+  });
+  meterFilter.addEventListener("change", applyFilter);
+  search.addEventListener("input", applyFilter);
+  $("btnXlsx").addEventListener("click", downloadXlsx);
+  $("btnCsv").addEventListener("click", downloadCsv);
+  $("btnCopy").addEventListener("click", copyTable);
+
+  /* ---------- CHARTS ---------- */
+  const charts = {};        // Chart.js instances by canvas id
+  const chartMeter = $("chartMeter"), chartRange = $("chartRange"), chartAgg = $("chartAgg");
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  // numeric helpers on a parsed cell object
+  function cellNum(c) { return (c && typeof c === "object" && c.isNum) ? c.num : null; }
+
+  // Build {t: Date, a, b, c, imp, exp} points for one meter, time-sorted
+  function pointsForMeter(meter) {
+    const pts = [];
+    for (const r of rows) {
+      if (r.meter !== meter) continue;
+      const iso = r.date + "T" + (r.cells[2] || "00:00:00");
+      const t = new Date(iso.replace(/-/g, "/").replace("T", " "));
+      if (isNaN(t)) continue;
+      const a = cellNum(r.cells[4]);
+      const imp = cellNum(r.cells[7]);
+      // current from this single reading: I = kWh × 1000 ÷ V (1-phase, phase A)
+      const cur = (imp != null && a != null && a > 0) ? (imp * 1000 / a) : null;
+      pts.push({
+        t,
+        a,
+        b: cellNum(r.cells[5]),
+        c: cellNum(r.cells[6]),
+        imp,
+        exp: cellNum(r.cells[8]),
+        cur,
+      });
+    }
+    pts.sort((x, y) => x.t - y.t);
+    return pts;
+  }
+
+  function filterRange(pts) {
+    const v = chartRange.value;
+    if (!pts.length) return pts;
+    if (v === "custom") {
+      const fromV = $("dateFrom").value, toV = $("dateTo").value;
+      let from = fromV ? new Date(fromV + "T00:00:00").getTime() : -Infinity;
+      let to   = toV   ? new Date(toV   + "T23:59:59").getTime() :  Infinity;
+      return pts.filter(p => { const t = p.t.getTime(); return t >= from && t <= to; });
+    }
+    if (v === "all") return pts;
+    const last = pts[pts.length - 1].t.getTime();
+    const cutoff = last - Number(v) * 86400000;   // v may be fractional-day; 1 = 24h
+    return pts.filter(p => p.t.getTime() >= cutoff);
+  }
+
+  // format a Date as a short axis/tooltip label
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function fmtDT(t){ return `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())} ${pad(t.getHours())}:${pad(t.getMinutes())}`; }
+  function fmtDay(t){ return `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`; }
+
+  // Aggregate time-sorted points into hour / day buckets.
+  // Voltage (a,b,c) = average of readings in the bucket; kW (imp,exp) = sum.
+  // mode: "raw" | "hour" | "day". Returns the same {t,a,b,c,imp,exp,label} shape.
+  function aggregate(pts, mode) {
+    if (mode === "raw" || !pts.length) {
+      return pts.map(p => ({ ...p, label: fmtDT(p.t) }));
+    }
+    const buckets = new Map();   // key -> {t, aSum,aN, bSum,bN, cSum,cN, imp, exp}
+    for (const p of pts) {
+      const t = p.t;
+      let key, bt, label;
+      if (mode === "hour") {
+        key = `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())} ${pad(t.getHours())}`;
+        bt = new Date(t.getFullYear(), t.getMonth(), t.getDate(), t.getHours(), 0, 0);
+        label = `${fmtDay(bt)} ${pad(bt.getHours())}:00`;
+      } else { // day
+        key = fmtDay(t);
+        bt = new Date(t.getFullYear(), t.getMonth(), t.getDate(), 0, 0, 0);
+        label = fmtDay(bt);
+      }
+      let b = buckets.get(key);
+      if (!b) { b = { t: bt, label, aSum:0,aN:0, bSum:0,bN:0, cSum:0,cN:0, curSum:0,curN:0, imp:null, exp:null }; buckets.set(key, b); }
+      if (p.a != null) { b.aSum += p.a; b.aN++; }
+      if (p.b != null) { b.bSum += p.b; b.bN++; }
+      if (p.c != null) { b.cSum += p.c; b.cN++; }
+      if (p.cur != null) { b.curSum += p.cur; b.curN++; }   // current averaged (per-reading)
+      if (p.imp != null) { b.imp = (b.imp || 0) + p.imp; }
+      if (p.exp != null) { b.exp = (b.exp || 0) + p.exp; }
+    }
+    return [...buckets.values()]
+      .sort((x,y) => x.t - y.t)
+      .map(b => ({
+        t: b.t, label: b.label,
+        a: b.aN ? b.aSum / b.aN : null,
+        b: b.bN ? b.bSum / b.bN : null,
+        c: b.cN ? b.cSum / b.cN : null,
+        cur: b.curN ? b.curSum / b.curN : null,
+        imp: b.imp, exp: b.exp,
+      }));
+  }
+
+  function destroyCharts() {
+    Object.values(charts).forEach(c => c && c.destroy());
+  }
+
+  // Category x-axis (no time-adapter dependency) with clickable legend.
+  function baseOpts(yTitle, showLegend) {
+    const ink = cssVar("--muted"), grid = cssVar("--grid"), fg = cssVar("--fg");
+    return {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          display: !!showLegend, position: "top", align: "end",
+          labels: { color: fg, usePointStyle: true, pointStyle: "line", boxWidth: 22, padding: 14, font: { size: 12 } },
+          onHover: (e) => { e.native.target.style.cursor = "pointer"; },
+          onLeave: (e) => { e.native.target.style.cursor = "default"; },
+        },
+        tooltip: {
+          backgroundColor: fg, titleColor: cssVar("--bg"), bodyColor: cssVar("--bg"),
+          padding: 10, cornerRadius: 8, displayColors: true, usePointStyle: true,
+        },
+        zoom: {
+          pan: { enabled: true, mode: "x", modifierKey: null },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            drag: { enabled: true, backgroundColor: hexA(cssVar("--accent") || "#6d28d9", 0.15),
+                    borderColor: cssVar("--accent"), borderWidth: 1, modifierKey: "shift" },
+            mode: "x",
+          },
+          limits: { x: { minRange: 2 } },
+        },
+      },
+      scales: {
+        x: {
+          type: "category",
+          grid: { color: grid, display: false },
+          ticks: { color: ink, maxRotation: 0, autoSkip: true, maxTicksLimit: 8, font: { size: 11 } },
+        },
+        y: {
+          title: { display: !!yTitle, text: yTitle, color: ink, font: { size: 12 } },
+          grid: { color: grid }, ticks: { color: ink, font: { size: 11 } },
+        },
+      },
+    };
+  }
+
+  function hexA(hex, a) {
+    const h = hex.replace("#","");
+    const n = h.length === 3 ? h.split("").map(x=>x+x).join("") : h;
+    const r = parseInt(n.slice(0,2),16), g = parseInt(n.slice(2,4),16), b = parseInt(n.slice(4,6),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  const lineDS = (label, data, color, fill) => ({
+    label, data, borderColor: color,
+    backgroundColor: fill ? hexA(color, 0.12) : color,
+    fill: fill ? "origin" : false,
+    borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
+    pointHoverBackgroundColor: color, pointHoverBorderColor: "#fff", pointHoverBorderWidth: 2,
+    tension: 0.25, spanGaps: true,
+  });
+
+  function showChartMsg(id, msg) {
+    const cv = $(id); if (!cv) return;
+    const ctx = cv.getContext("2d");
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.save();
+    ctx.fillStyle = cssVar("--muted"); ctx.font = "14px sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(msg, cv.width/2, cv.height/2);
+    ctx.restore();
+  }
+
+  function renderCharts() {
+    const meter = chartMeter.value;
+    destroyCharts();
+    if (!meter) return;
+    const pts = filterRange(pointsForMeter(meter));
+
+    if (!pts.length) {
+      ["cVolt","cPower","cDaily","cBar"].forEach(id => showChartMsg(id, "ไม่มีข้อมูลในช่วงเวลาที่เลือก"));
+      return;
+    }
+
+    // Apply the time-aggregation selected by the user (ดิบ / รายชั่วโมง / รายวัน)
+    const aggMode = chartAgg.value;
+    const agg = aggregate(pts, aggMode);
+    const labels = agg.map(p => p.label);
+    const hasA = agg.some(p => p.a != null);
+    const hasB = agg.some(p => p.b != null);
+    const hasC = agg.some(p => p.c != null);
+    const vUnit = aggMode === "raw" ? "โวลต์ (V)" : "โวลต์ (V) · เฉลี่ย";
+    const kUnit = aggMode === "raw" ? "kWh" : "kWh · รวมต่อช่วง";
+
+    // 1) Voltage line — เฟส A/B/C ตามวันที่-เวลา (เฉลี่ยเมื่อรวมเวลา)
+    const vds = [];
+    if (hasA) vds.push(lineDS("เฟส A", agg.map(p => p.a), cssVar("--s-a")));
+    if (hasB) vds.push(lineDS("เฟส B", agg.map(p => p.b), cssVar("--s-b")));
+    if (hasC) vds.push(lineDS("เฟส C", agg.map(p => p.c), cssVar("--s-c")));
+    charts.cVolt = new Chart($("cVolt"), {
+      type: "line", data: { labels, datasets: vds }, options: baseOpts(vUnit, true),
+    });
+
+    // 2) Power line — kW Import / Export ตามวันที่-เวลา (รวมเมื่อรวมเวลา)
+    const pds = [
+      lineDS("kWh Import", agg.map(p => p.imp), cssVar("--s-imp"), true),
+      lineDS("kWh Export", agg.map(p => p.exp), cssVar("--s-exp"), true),
+    ];
+    charts.cPower = new Chart($("cPower"), {
+      type: "line", data: { labels, datasets: pds }, options: baseOpts(kUnit, true),
+    });
+
+    // 3) Daily voltage avg/min/max (over whichever phases have data)
+    const byDay = {};
+    for (const p of pts) {
+      const vals = [p.a, p.b, p.c].filter(v => v != null);
+      if (!vals.length) continue;
+      const key = `${p.t.getFullYear()}-${pad(p.t.getMonth()+1)}-${pad(p.t.getDate())}`;
+      (byDay[key] = byDay[key] || []).push(...vals);
+    }
+    const days = Object.keys(byDay).sort();
+    const avg = arr => arr.reduce((s,v)=>s+v,0)/arr.length;
+    charts.cDaily = new Chart($("cDaily"), {
+      type: "line",
+      data: { labels: days, datasets: [
+        lineDS("เฉลี่ย", days.map(d => avg(byDay[d])), cssVar("--s-a")),
+        { ...lineDS("ต่ำสุด", days.map(d => Math.min(...byDay[d])), cssVar("--s-b")), borderDash:[5,4], borderWidth:1.5 },
+        { ...lineDS("สูงสุด", days.map(d => Math.max(...byDay[d])), cssVar("--s-c")), borderDash:[5,4], borderWidth:1.5 },
+      ] },
+      options: baseOpts("โวลต์ (V)", true),
+    });
+
+    // 4) Custom chart — user picks which values to plot (uses the same aggregated data)
+    renderCustomChart._agg = agg; renderCustomChart._labels = labels;
+    renderCustomChart(agg, labels);
+  }
+
+  // Definition of every value the custom chart can plot.
+  // current I = kWh × 1000 ÷ V (single phase, using kWh Import and phase-A voltage)
+  const SERIES_DEFS = {
+    a:   { label: "แรงดัน A (V)",   color: () => cssVar("--s-a"),   get: p => p.a },
+    b:   { label: "แรงดัน B (V)",   color: () => cssVar("--s-b"),   get: p => p.b },
+    c:   { label: "แรงดัน C (V)",   color: () => cssVar("--t3"),    get: p => p.c },
+    imp: { label: "kWh Import",     color: () => cssVar("--s-imp"), get: p => p.imp },
+    exp: { label: "kWh Export",     color: () => cssVar("--s-exp"), get: p => p.exp },
+    cur: { label: "กระแส I (A)",    color: () => cssVar("--t4"),    get: p => p.cur != null ? p.cur : null },
+  };
+
+  function renderCustomChart(agg, labels) {
+    const picked = [...document.querySelectorAll(".customSeries:checked")].map(cb => cb.value);
+    const type = $("customType").value;
+    if (charts.cCustom) { charts.cCustom.destroy(); charts.cCustom = null; }
+    if (!picked.length) { showChartMsg("cCustom", "เลือกค่าที่ต้องการพล็อตด้านบน"); return; }
+
+    const datasets = picked.map(key => {
+      const def = SERIES_DEFS[key];
+      const color = def.color();
+      const data = agg.map(p => def.get(p));
+      if (type === "bar") {
+        return { label: def.label, data, backgroundColor: color, borderRadius: 4, maxBarThickness: 30 };
+      }
+      return lineDS(def.label, data, color);
+    });
+    charts.cCustom = new Chart($("cCustom"), {
+      type, data: { labels, datasets }, options: baseOpts("", true),
+    });
+  }
+
+  // Tabs
+  document.querySelectorAll(".tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const which = btn.dataset.tab;
+      $("panel-data").hidden = which !== "data";
+      $("panel-charts").hidden = which !== "charts";
+      if (which === "charts") renderCharts();
+    });
+  });
+  // Set the custom date inputs' bounds/defaults from the selected meter's data
+  function syncDateBounds() {
+    const meter = chartMeter.value;
+    const pts = pointsForMeter(meter);
+    if (!pts.length) return;
+    const iso = t => `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+    const lo = iso(pts[0].t), hi = iso(pts[pts.length-1].t);
+    const df = $("dateFrom"), dt = $("dateTo");
+    df.min = lo; df.max = hi; dt.min = lo; dt.max = hi;
+    if (!df.value) df.value = lo;
+    if (!dt.value) dt.value = hi;
+  }
+
+  chartMeter.addEventListener("change", () => {
+    // new meter → reset the custom dates to its own range
+    $("dateFrom").value = ""; $("dateTo").value = "";
+    syncDateBounds();
+    renderCharts();
+  });
+  chartRange.addEventListener("change", () => {
+    const custom = chartRange.value === "custom";
+    $("dateRangeBox").hidden = !custom;
+    if (custom) syncDateBounds();
+    renderCharts();
+  });
+  $("dateFrom").addEventListener("change", renderCharts);
+  $("dateTo").addEventListener("change", renderCharts);
+  chartAgg.addEventListener("change", renderCharts);
+
+  // Custom chart controls → re-render only that chart (keeps other charts' zoom)
+  function refreshCustom() {
+    if (renderCustomChart._agg) renderCustomChart(renderCustomChart._agg, renderCustomChart._labels);
+  }
+  document.querySelectorAll(".customSeries").forEach(cb => cb.addEventListener("change", refreshCustom));
+  $("customType").addEventListener("change", refreshCustom);
+  $("btnResetZoom").addEventListener("click", () => {
+    Object.values(charts).forEach(c => { try { c && c.resetZoom && c.resetZoom(); } catch(e){} });
+    showToast("รีเซ็ตการซูมแล้ว");
+  });
+
+  // Expand a chart to fill the screen (CSS overlay — reliable everywhere)
+  function resizeAllCharts() {
+    setTimeout(() => {
+      Object.values(charts).forEach(c => { try { c && c.resize(); } catch(e){} });
+    }, 60);
+  }
+  function toggleExpand(card, btn) {
+    const expanded = card.classList.toggle("expanded");
+    document.body.classList.toggle("has-expanded", expanded);
+    btn.textContent = expanded ? "✕" : "⛶";
+    btn.title = expanded ? "ย่อกลับ" : "ขยายเต็มจอ";
+    resizeAllCharts();
+  }
+  document.querySelectorAll(".btn-full").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleExpand(btn.closest(".chartcard"), btn);
+    });
+  });
+  // Esc closes any expanded chart
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const card = document.querySelector(".chartcard.expanded");
+      if (card) toggleExpand(card, card.querySelector(".btn-full"));
+    }
+  });
+
+  // Self-test on a known sample so logic is verified at load (not shown to user)
+  (function selfTest(){
+    const t = parseLine("TTC01 6500000073,2022-07-25 15:30:00,128,394,-,-,0,0", ",");
+    console.assert(t && t.cells[1]==="2022-07-25" && t.cells[2]==="15:30:00", "date split");
+    console.assert(t.cells[4].text==="3.94", "voltage /100");
+    console.assert(t.cells[5].text==="-", "dash kept");
+  })();
+})();
+</script>
+
+</body></html>
